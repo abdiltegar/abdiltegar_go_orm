@@ -3,6 +3,7 @@ package userController
 import (
 	"github.com/labstack/echo/v4"
 	"learn_orm/config"
+	"learn_orm/middlewares"
 	"learn_orm/models"
 	"net/http"
 	"strconv"
@@ -102,14 +103,40 @@ func UpdateUserController(c echo.Context) error {
 
 	userParam := models.User{}
 	c.Bind(&userParam)
-	userParam.ID = uint(id)
-	user = userParam
 
-	if err := config.DB.Save(&user).Error; err != nil {
+	if err := config.DB.Model(models.User{}).Where("ID = ?", id).Updates(userParam).Error; err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"message": "success update user",
-		"users":   user,
+		"user":    user,
+	})
+}
+
+func LoginController(c echo.Context) error {
+	user := models.User{}
+	c.Bind(&user)
+
+	err := config.DB.Where("email = ? AND password = ?", user.Email, user.Password).First(&user).Error
+	if err != nil {
+		return c.JSON(http.StatusOK, map[string]interface{}{
+			"message": "Login Failed",
+			"error":   err.Error(),
+		})
+	}
+
+	token, err := middlewares.CreateToken(user.ID, user.Name)
+	if err != nil {
+		return c.JSON(http.StatusOK, map[string]interface{}{
+			"message": "Login Failed",
+			"error":   err.Error(),
+		})
+	}
+
+	userResponse := models.UserResponse{user.ID, user.Name, user.Email, token}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"message": "Login Success",
+		"data":    userResponse,
 	})
 }

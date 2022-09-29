@@ -102,14 +102,12 @@ func UpdateBookController(c echo.Context) error {
 
 	bookParam := models.Book{}
 	c.Bind(&bookParam)
-	bookParam.ID = uint(id)
-	book = bookParam
 
-	if err := config.DB.Save(&book).Error; err != nil {
+	if err := config.DB.Model(models.Book{}).Where("ID = ?", id).Updates(bookParam).Error; err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"message": "success update book",
-		"books":   book,
+		"book":    book,
 	})
 }
